@@ -44,7 +44,7 @@ class PlatoRestControllerTest {
     @MockBean
     private CartaService cartaService;
 
-    // Necesario para que el SecurityConfig real (con CSRF deshabilitado) pueda
+     // Necesario para que el SecurityConfig real (CSRF activo, pero exento en /api/**) pueda
     // construirse dentro del contexto reducido de @WebMvcTest: SecurityConfig
     // depende de AppUserDetailsService, que aquí no se usa realmente
     // (no hay endpoints de login en este controlador), pero debe existir

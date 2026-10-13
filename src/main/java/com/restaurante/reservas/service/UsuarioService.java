@@ -6,6 +6,7 @@ import com.restaurante.reservas.model.Usuario;
 import com.restaurante.reservas.repository.ReservaRepository;
 import com.restaurante.reservas.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class UsuarioService {
         return usuarioRepository.findById(id);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Usuario crear(UsuarioFormDTO form) {
         validarPassword(form.getPassword(), true);
@@ -50,6 +52,7 @@ public class UsuarioService {
         return usuarioRepository.save(u);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Usuario actualizar(UsuarioFormDTO form) {
         Usuario u = usuarioRepository.findById(form.getId())
@@ -70,6 +73,7 @@ public class UsuarioService {
         return usuarioRepository.save(u);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void eliminar(Long id, String dniActual) {
         Usuario u = usuarioRepository.findById(id)
@@ -85,6 +89,27 @@ public class UsuarioService {
             throw new IllegalStateException("No se puede eliminar al último administrador.");
         }
         usuarioRepository.delete(u);
+    }
+    
+    // Cambio de clave del propio usuario (CLIENTE o ADMIN); "#dni == authentication.name" impide cambiar la clave de otra persona.
+    @PreAuthorize("#dni == authentication.name")
+    @Transactional
+    public void cambiarPassword(String dni, String actual, String nueva, String confirmacion) {
+        Usuario u = usuarioRepository.findByDni(dni)
+                .orElseThrow(() -> new IllegalStateException("El usuario no existe."));
+
+        if (actual == null || !passwordEncoder.matches(actual, u.getPassword())) {
+            throw new IllegalStateException("La contraseña actual es incorrecta.");
+        }
+        if (nueva == null || nueva.isBlank()) {
+            throw new IllegalStateException("La nueva contraseña es obligatoria.");
+        }
+        validarPassword(nueva, true); // mínimo 8 caracteres
+        if (!nueva.equals(confirmacion)) {
+            throw new IllegalStateException("La confirmación no coincide con la nueva contraseña.");
+        }
+        u.setPassword(passwordEncoder.encode(nueva));
+        usuarioRepository.save(u);
     }
 
     private void validarPassword(String password, boolean obligatoria) {

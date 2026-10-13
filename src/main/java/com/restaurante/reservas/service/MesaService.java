@@ -4,6 +4,7 @@ import com.restaurante.reservas.model.Mesa;
 import com.restaurante.reservas.repository.MesaRepository;
 import com.restaurante.reservas.repository.ReservaRepository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class MesaService {
 
     public List<Mesa> listarTodas() { return mesaRepository.findAllByOrderByNumeroAsc(); }
     // Escribe en BD: necesita su propia transacción de escritura porque la clase es readOnly.
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Mesa guardar(Mesa m) { return mesaRepository.save(m); }
 
@@ -31,6 +33,7 @@ public class MesaService {
         return mesaRepository.findById(id);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Mesa crear(Mesa datos) {
         if (mesaRepository.existsByNumero(datos.getNumero())) {
@@ -40,6 +43,7 @@ public class MesaService {
         return mesaRepository.save(new Mesa(datos.getNumero(), datos.getCapacidad()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Mesa actualizar(Long id, Mesa datos) {
         Mesa mesa = mesaRepository.findById(id)
@@ -52,6 +56,7 @@ public class MesaService {
         mesa.setCapacidad(datos.getCapacidad());
         return mesaRepository.save(mesa);
     }
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void eliminar(Long id) {
         if (reservaRepository.existsByMesaId(id)) {

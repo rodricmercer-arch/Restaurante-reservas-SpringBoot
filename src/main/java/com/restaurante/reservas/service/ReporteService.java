@@ -7,6 +7,7 @@ import com.restaurante.reservas.repository.MesaRepository;
 import com.restaurante.reservas.repository.PlatoRepository;
 import com.restaurante.reservas.repository.ReservaRepository;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,7 @@ public class ReporteService {
         this.detalleReservaRepository = detalleReservaRepository;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public ReporteDTO generar() {
         Map<String, Long> reservasPorEstado = aMapa(reservaRepository.contarPorEstadoJPQL());
         Map<String, Long> mesasPorEstado = aMapa(mesaRepository.contarPorEstadoJPQL());

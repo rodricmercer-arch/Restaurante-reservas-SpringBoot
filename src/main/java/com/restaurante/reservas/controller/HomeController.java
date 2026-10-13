@@ -28,4 +28,9 @@ public class HomeController {
         }
         return "redirect:/cliente/mesas";
     }
+    
+    @GetMapping("/403")
+    public String accesoDenegado() {
+        return "error/403";
+    }
 }

@@ -22,6 +22,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 
     boolean existsByClienteId(Long clienteId);
 
+    long countByClienteId(Long clienteId);
+
     // Filtra reservas por DNI (LIKE), estados (IN) y rango de fechas (BETWEEN), trayendo cliente y mesa con JOIN FETCH.
     @Query("SELECT r FROM Reserva r " +
            "JOIN FETCH r.cliente c " +

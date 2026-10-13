@@ -5,6 +5,7 @@ import com.restaurante.reservas.model.Plato;
 import com.restaurante.reservas.repository.PlatoRepository;
 import com.restaurante.reservas.repository.DetalleReservaRepository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -31,8 +32,10 @@ public class CartaService {
     public List<Plato> bebidas() { return platoRepository.findByCategoria(CategoriaPlato.BEBIDA); }
     public List<Plato> todos() { return platoRepository.findAll(); }
     // Escribe en BD (lo usa la API REST): necesita su propia transacción de escritura porque la clase es readOnly.
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Plato guardar(Plato p) { return platoRepository.save(p); }
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void eliminar(Long id) {
         if (detalleReservaRepository.existsByPlatoId(id)) {
@@ -54,6 +57,7 @@ public class CartaService {
     }
     // ---- Fase 1: CRUD con edición desde el panel admin ----
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Plato crear(Plato datos) {
         if (platoRepository.existsByNombreIgnoreCase(datos.getNombre())) {
@@ -63,6 +67,7 @@ public class CartaService {
                 datos.getPrecio(), datos.getCategoria()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Plato actualizar(Long id, Plato datos) {
         Plato plato = platoRepository.findById(id)
