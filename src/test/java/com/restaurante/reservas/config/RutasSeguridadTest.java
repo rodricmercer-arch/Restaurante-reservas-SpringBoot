@@ -16,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -55,6 +56,11 @@ class RutasSeguridadTest {
     // SecurityConfig lo necesita para construirse dentro del contexto reducido de @WebMvcTest.
     @MockBean
     private AppUserDetailsService appUserDetailsService;
+
+    // apiChain usa oauth2ResourceServer, que exige un JwtDecoder para construirse.
+    // JwtConfig no entra en @WebMvcTest, así que se simula aquí.
+    @MockBean
+    private JwtDecoder jwtDecoder;
 
     @BeforeEach
     void datosDeApoyo() {

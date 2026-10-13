@@ -4,13 +4,18 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
 @Configuration
 @EnableWebSecurity
@@ -37,12 +42,47 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    public AuthenticationManager authManager() {
+        // Construido explícitamente para evitar ambigüedad entre las dos cadenas.
+        return new ProviderManager(authProvider());
     }
 
+    /** Cadena 1: API REST y Swagger. Stateless, sin CSRF, autenticada por JWT. */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain apiChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher("/api/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+            .csrf(csrf -> csrf.disable()) // sin cookies de sesión no hay riesgo CSRF
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/login", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/platos/**").hasAnyRole("CLIENTE", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/platos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/platos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/platos/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+            );
+        return http.build();
+    }
+
+    /** Lee el claim "roles" del token y lo convierte en autoridades ROLE_xxx. */
+    private JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
+        authorities.setAuthoritiesClaimName("roles");
+        authorities.setAuthorityPrefix("ROLE_");
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authorities);
+        return converter;
+    }
+
+    /** Cadena 2: aplicación web con Thymeleaf, sesión y CSRF activo. */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain webChain(HttpSecurity http) throws Exception {
         http
             .authenticationProvider(authProvider())
             .authorizeHttpRequests(auth -> auth
@@ -52,7 +92,6 @@ public class SecurityConfig {
                 .requestMatchers("/perfil/**").hasAnyRole("CLIENTE", "ADMIN")
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/cliente/**").hasRole("CLIENTE")
-                .requestMatchers("/api/**").authenticated() // PROVISIONAL (Fase 3): la Fase 4 definirá los permisos de la API
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
@@ -72,7 +111,6 @@ public class SecurityConfig {
                 .permitAll()
             )
             // CSRF activo: los formularios con th:action reciben el token automáticamente.
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**")) // PROVISIONAL (Fase 3): la Fase 4 definirá la seguridad de la API
             .exceptionHandling(e -> e.accessDeniedPage("/403"));
 
         return http.build();
