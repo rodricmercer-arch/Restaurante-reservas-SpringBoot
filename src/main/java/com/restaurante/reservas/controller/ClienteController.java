@@ -5,6 +5,7 @@ import com.restaurante.reservas.repository.*;
 import com.restaurante.reservas.service.CartaService;
 import com.restaurante.reservas.service.MesaService;
 import com.restaurante.reservas.service.ReservaService;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -64,6 +65,15 @@ public class ClienteController {
         try {
             reservaService.crearReserva(cliente, mesaId, platoPrincipalId, platoPostreId, platoBebidaId);
             return "redirect:/cliente/mireserva";
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // Dos clientes reservaron la misma mesa a la vez: Hibernate detectó el cambio de @Version y revirtió al segundo.
+            model.addAttribute("error", "Otro cliente reservó esta mesa hace un instante. Elige otra mesa.");
+            Mesa mesa = mesaRepository.findById(mesaId).orElseThrow();
+            model.addAttribute("mesa", mesa);
+            model.addAttribute("principales", cartaService.principales());
+            model.addAttribute("postres", cartaService.postres());
+            model.addAttribute("bebidas", cartaService.bebidas());
+            return "cliente/carta";
         } catch (RuntimeException e) {
             model.addAttribute("error", e.getMessage());
             Mesa mesa = mesaRepository.findById(mesaId).orElseThrow();

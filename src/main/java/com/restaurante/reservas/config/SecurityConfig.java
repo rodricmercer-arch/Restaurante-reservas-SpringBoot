@@ -45,6 +45,7 @@ public class SecurityConfig {
             .authenticationProvider(authProvider())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/login", "/css/**", "/js/**", "/img/**").permitAll()
+                .requestMatchers("/reportes/**").hasRole("ADMIN") // PROVISIONAL (Fase 2): la Fase 3 revisará el orden final
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/cliente/**").hasRole("CLIENTE")
                 .anyRequest().authenticated()
